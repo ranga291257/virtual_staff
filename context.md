@@ -21,9 +21,9 @@ safety and traceable orchestration cycles.
 ## Important Files
 
 - `virtual_staff/orchestrator.py`
-  - Core cycle controller, handoff retry/timeout, ranking, conflict rejection
+  - Core cycle controller, handoff retry/timeout, ranking, conflict rejection, operator handling
 - `virtual_staff/subagents.py`
-  - Process optimization, maintenance, simulation, safety audit behaviors
+  - Process optimization, maintenance, control room operator, simulation, safety audit behaviors
 - `virtual_staff/dwsim_pythonnet_runner.py`
   - pythonnet Automation3 probe and DWSIM run path selection
 - `virtual_staff/safety.py`
@@ -35,19 +35,21 @@ safety and traceable orchestration cycles.
 - `fired_heater_control.py`
   - Closed-loop preview (used as compact control sanity trace)
 - `tests/test_virtual_staff_scenarios.py`
-  - Regression scenarios for normal/reject/conflict/fallback/retry-timeout
+  - Regression scenarios for normal/reject/conflict/fallback/retry-timeout/operator-alarm
 
 ## Core Data Flow
 
 1. Build shared memory (`default_memory` or runtime state source).
 2. Maintenance subagent returns constraints.
 3. Process subagent emits candidate list.
-4. Safety gate + safety audit validate each candidate.
-5. Simulation subagent evaluates candidate:
+4. Control room operator subagent adjusts candidate under active alarms and constraints.
+5. Safety gate + safety audit validate each candidate.
+6. Simulation subagent evaluates candidate:
    - pythonnet-first path,
+   - fallback to starter path,
    - fallback to deterministic calculation path.
-6. Orchestrator applies maintenance conflict checks, ranks, selects.
-7. Event store logs all key events for replay.
+7. Orchestrator applies maintenance conflict checks, ranks, selects.
+8. Event store logs all key events for replay.
 
 ## Runtime Output Paths
 

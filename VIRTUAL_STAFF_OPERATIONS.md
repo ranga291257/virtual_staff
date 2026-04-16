@@ -6,6 +6,7 @@ This document defines the pilot-local, high-autonomy virtual staff runtime for:
 
 - AI Process Engineer
 - AI Maintenance Engineer
+- AI Control Room Operator
 - Orchestrator + specialist subagents
 
 It is aligned to the fired-heater reference case and advisory-first governance.
@@ -14,12 +15,12 @@ It is aligned to the fired-heater reference case and advisory-first governance.
 
 - `virtual_staff/contracts.py`: role contracts, handoff models, schema definitions
 - `virtual_staff/safety.py`: deterministic safety policy, autonomy envelope
-- `virtual_staff/subagents.py`: process optimization, maintenance, simulation, safety-audit subagents
+- `virtual_staff/subagents.py`: process optimization, maintenance, Control Room Operator, simulation, safety-audit subagents
 - `virtual_staff/dwsim_pythonnet_runner.py`: pythonnet-first DWSIM Automation3 runner with starter fallback
 - `virtual_staff/orchestrator.py`: cycle scheduling logic, handoff/retry, ranking, and publication package
 - `virtual_staff/event_store.py`: JSONL event log and replay support
 - `run_virtual_staff_cycle.py`: single-cycle execution entrypoint
-- `tests/test_virtual_staff_scenarios.py`: normal/rejection/conflict/fallback/retry-timeout scenario tests
+- `tests/test_virtual_staff_scenarios.py`: normal/rejection/conflict/fallback/retry-timeout/operator-alarm scenario tests
 
 ## Autonomy Matrix
 
@@ -58,11 +59,12 @@ Each response must include:
 
 1. Maintenance subagent emits active constraints and maintenance actions.
 2. Process optimization subagent generates candidate settings.
-3. Deterministic safety gate validates each candidate.
-4. Safety audit subagent performs policy-level checks.
-5. Simulation subagent runs pythonnet-first DWSIM; falls back to starter and then deterministic calc if needed.
-6. Orchestrator ranks feasible candidates and emits selected action package.
-7. Event store logs handoffs, rejections, and cycle completion for replay.
+3. Control Room Operator subagent applies bounded adjustments using active alarms and operating constraints.
+4. Deterministic safety gate validates each candidate.
+5. Safety audit subagent performs policy-level checks.
+6. Simulation subagent runs pythonnet-first DWSIM; falls back to starter and then deterministic calc if needed.
+7. Orchestrator ranks feasible candidates and emits selected action package.
+8. Event store logs handoffs, rejections, and cycle completion for replay.
 
 ## Local Pilot Boundaries
 

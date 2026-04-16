@@ -7,6 +7,7 @@ multi-agent fired-heater advisory workflow with:
 
 - AI Process Engineer behavior (candidate generation + optimization intent),
 - AI Maintenance Engineer behavior (reliability constraints + maintenance actions),
+- AI Control Room Operator behavior (bounded parameter adjustment + alarm response),
 - deterministic safety gating,
 - pythonnet-first DWSIM execution,
 - fallback to script-based deterministic calculation/control preview,
@@ -20,8 +21,8 @@ writes.
 - `virtual_staff/contracts.py`: handoff contracts, role definitions, schemas
 - `virtual_staff/safety.py`: deterministic safety policy and autonomy matrix
 - `virtual_staff/dwsim_pythonnet_runner.py`: pythonnet-first DWSIM runner
-- `virtual_staff/subagents.py`: process, maintenance, simulation, safety-audit subagents
-- `virtual_staff/orchestrator.py`: orchestration loop, retry/timeout, ranking, conflict handling
+- `virtual_staff/subagents.py`: process, maintenance, Control Room Operator, simulation, safety-audit subagents
+- `virtual_staff/orchestrator.py`: orchestration loop, retry/timeout, operator handling, ranking, conflict handling
 - `virtual_staff/event_store.py`: JSONL event store + replay helpers
 - `run_virtual_staff_cycle.py`: single-cycle execution entrypoint
 - `fired_heater_calcs.py`: thermal-oil fired-heater deterministic calculations
@@ -86,19 +87,21 @@ Current scenario coverage:
 - maintenance conflict path
 - simulation fallback path
 - retry/timeout path
+- control-room operator alarm-response path
 
 ## Orchestration Behavior (Cycle Summary)
 
 1. Maintenance subagent emits active constraints and actions.
 2. Process subagent emits candidate settings.
-3. Safety gate validates candidate bounds and autonomy tier.
-4. Safety-audit subagent performs deterministic policy checks.
-5. Simulation subagent evaluates candidate:
+3. Control-room operator subagent adjusts candidates under operating constraints and active alarms.
+4. Safety gate validates candidate bounds and autonomy tier.
+5. Safety-audit subagent performs deterministic policy checks.
+6. Simulation subagent evaluates candidate:
    - pythonnet-first DWSIM path,
    - fallback to starter/calc path.
-6. Orchestrator applies maintenance conflict checks, ranks valid options,
+7. Orchestrator applies maintenance conflict checks, ranks valid options,
    and selects action package.
-7. All decisions and retries are logged to event store.
+8. All decisions and retries are logged to event store.
 
 ## Safety and Governance Boundaries
 

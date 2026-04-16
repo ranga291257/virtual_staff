@@ -87,6 +87,20 @@ class TestVirtualStaffScenarios(unittest.TestCase):
         timeout_events = orch.event_store.replay_by_event("handoff_timeout")
         self.assertGreaterEqual(len(timeout_events), 1)
 
+    def test_control_room_operator_alarm_response(self):
+        orch = self._orchestrator()
+        memory = default_memory()
+        memory.active_alarms = [{"code": "HIGH_STACK_TEMP", "severity": "high"}]
+        memory.operating_constraints["alarm_stack_temp_cap_c"] = 235.0
+
+        result = orch.run_cycle(memory, case_name="test_operator_alarm")
+        self.assertGreaterEqual(len(result["ranked_options"]), 1)
+        selected = result["selected_action"]
+        self.assertIsNotNone(selected)
+        self.assertIn("operator_output", selected)
+        self.assertEqual(selected["operator_output"]["operator_mode"], "alarm_response")
+        self.assertLessEqual(float(selected["candidate"]["stack_temp_c"]), 235.0)
+
 
 if __name__ == "__main__":
     unittest.main()

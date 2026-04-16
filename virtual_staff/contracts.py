@@ -15,6 +15,7 @@ class AgentRole(str, Enum):
     MAINTENANCE_SUBAGENT = "maintenance_subagent"
     SIM_RUNNER_SUBAGENT = "sim_runner_subagent"
     SAFETY_AUDIT_SUBAGENT = "safety_audit_subagent"
+    CONTROL_ROOM_OPERATOR_SUBAGENT = "control_room_operator_subagent"
 
 
 class RiskClass(str, Enum):
@@ -91,6 +92,8 @@ class SharedMemory:
     last_accepted_recommendation: Optional[Dict[str, Any]] = None
     active_maintenance_constraints: Dict[str, Any] = field(default_factory=dict)
     unresolved_conflicts: List[Dict[str, Any]] = field(default_factory=list)
+    active_alarms: List[Dict[str, Any]] = field(default_factory=list)
+    operating_constraints: Dict[str, Any] = field(default_factory=dict)
 
 
 ROLE_CONTRACTS: Dict[AgentRole, Dict[str, Any]] = {

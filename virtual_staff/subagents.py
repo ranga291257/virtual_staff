@@ -154,3 +154,47 @@ class SafetyAuditSubagent:
             evidence=["deterministic policy check"],
             errors=[] if len(reasons) == 0 else reasons,
         )
+
+
+class ControlRoomOperatorSubagent:
+    role = AgentRole.CONTROL_ROOM_OPERATOR_SUBAGENT
+
+    def run(self, request: HandoffRequest) -> HandoffResponse:
+        heater = request.context["heater_state"]
+        candidate = request.context["candidate"]
+        alarms = request.context.get("active_alarms", [])
+        constraints = request.context.get("operating_constraints", {})
+
+        output_candidate = dict(candidate)
+        alarm_response: List[str] = []
+
+        # Operator behavior is bounded and alarm-first: tighten candidate when alarms are active.
+        if alarms:
+            output_candidate["excess_air_fraction"] = min(
+                max(float(output_candidate.get("excess_air_fraction", 0.10)), 0.12),
+                float(constraints.get("max_excess_air_fraction", 0.30)),
+            )
+            output_candidate["stack_temp_c"] = min(
+                float(output_candidate.get("stack_temp_c", 250.0)),
+                float(constraints.get("alarm_stack_temp_cap_c", 245.0)),
+            )
+            alarm_response = [f"responded_to_alarm:{a.get('code', 'unknown')}" for a in alarms]
+
+        output = {
+            "heater_id": heater["heater_id"],
+            "operator_candidate": output_candidate,
+            "operator_mode": "alarm_response" if alarms else "constraint_monitoring",
+            "alarm_response_actions": alarm_response,
+            "constraints_applied": {
+                "max_excess_air_fraction": constraints.get("max_excess_air_fraction", 0.30),
+                "alarm_stack_temp_cap_c": constraints.get("alarm_stack_temp_cap_c", 245.0),
+            },
+        }
+        return HandoffResponse(
+            request_id=request.request_id,
+            role=self.role,
+            success=True,
+            output=output,
+            artifacts={},
+            evidence=["bounded operator adjustment", "alarm-first control room response"],
+        )

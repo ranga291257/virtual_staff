@@ -1,0 +1,21 @@
+{
+  "heater_inputs": {
+    "heater_id": "FH-101",
+    "feed_flow_kg_s": 100.0,
+    "feed_inlet_temp_c": 260.0,
+    "target_outlet_temp": 300.0,
+    "cp_kj_kg_k": 2.5,
+    "density_kg_m3": 800.0,
+    "process_pressure_barg": 10.0,
+    "tube_dp_bar": 1.5,
+    "extra": null
+  },
+  "candidate_settings": {
+    "excess_air_fraction": 0.08,
+    "stack_temp_c": 240.0,
+    "ambient_temp_c": 25.0,
+    "methane_lhv_kj_kg": 50000.0,
+    "cp_flue_kj_kg_k": 1.1,
+    "notes": null
+  }
+}

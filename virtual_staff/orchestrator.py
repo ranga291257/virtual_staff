@@ -14,6 +14,8 @@ from virtual_staff.contracts import (
     SharedMemory,
 )
 from virtual_staff.event_store import OpsEventStore
+from virtual_staff.control_handles import MV_POLICIES, apply_mv_policy
+from virtual_staff.instrumentation import INSTRUMENT_TAGS
 from virtual_staff.safety import DeterministicSafetyGate
 from virtual_staff.subagents import (
     ControlRoomOperatorSubagent,
@@ -22,17 +24,63 @@ from virtual_staff.subagents import (
     SafetyAuditSubagent,
     SimRunnerSubagent,
 )
+from virtual_staff.tag_store import SQLiteTagStore
 
 
 class OrchestratorAgent:
-    def __init__(self, event_store: OpsEventStore | None = None):
+    def __init__(self, event_store: OpsEventStore | None = None, tag_store: SQLiteTagStore | None = None):
         self.event_store = event_store or OpsEventStore()
+        self.tag_store = tag_store or SQLiteTagStore()
         self.process_subagent = ProcessOptSubagent()
         self.maintenance_subagent = MaintenanceSubagent()
         self.control_room_operator_subagent = ControlRoomOperatorSubagent()
         self.sim_subagent = SimRunnerSubagent()
         self.safety_audit_subagent = SafetyAuditSubagent()
         self.safety_gate = DeterministicSafetyGate()
+
+    def _candidate_to_mv_targets(self, candidate: Dict[str, float]) -> Dict[str, float]:
+        excess_air = float(candidate.get("excess_air_fraction", 0.10))
+        stack_temp = float(candidate.get("stack_temp_c", 250.0))
+        return {
+            "mv.air_valve_open_pct": 35.0 + (excess_air * 180.0),
+            "mv.fuel_valve_open_pct": 30.0 + ((stack_temp - 180.0) * 0.22),
+            "mv.damper_open_pct": 28.0 + (excess_air * 150.0),
+        }
+
+    def _apply_mv_commands(
+        self,
+        candidate: Dict[str, float],
+        heater_state: Dict[str, Any],
+        correlation_id: str,
+    ) -> Dict[str, float]:
+        targets = self._candidate_to_mv_targets(candidate)
+        latest = self.tag_store.latest_values(MV_POLICIES.keys())
+        applied: Dict[str, float] = {}
+        for tag, requested in targets.items():
+            previous = float(latest.get(tag, heater_state.get(tag.split(".", 1)[1], requested)))
+            adjusted = apply_mv_policy(tag, previous_value=previous, requested_value=requested)
+            spec = INSTRUMENT_TAGS.get(tag)
+            self.tag_store.insert_sample(
+                tag=tag,
+                value=adjusted,
+                quality="good",
+                instrument_id=None if spec is None else spec.instrument_id,
+                source="agent_control_loop",
+                correlation_id=correlation_id,
+            )
+            applied[tag] = adjusted
+            self.event_store.append(
+                "mv_tag_write",
+                {
+                    "tag": tag,
+                    "requested_value": requested,
+                    "applied_value": adjusted,
+                    "previous_value": previous,
+                    "instrument_id": None if spec is None else spec.instrument_id,
+                },
+                correlation={"correlation_id": correlation_id},
+            )
+        return applied
 
     def _call_with_retry(self, subagent: Any, request: HandoffRequest) -> HandoffResponse:
         attempts = 0
@@ -221,6 +269,14 @@ class OrchestratorAgent:
                     "case_name": f"{case_name}_{idx}",
                 },
             )
+            applied_mvs = self._apply_mv_commands(
+                candidate=gate.sanitized_parameters,
+                heater_state=memory.heater_state,
+                correlation_id=sim_req.request_id,
+            )
+            memory.heater_state["fuel_valve_open_pct"] = applied_mvs["mv.fuel_valve_open_pct"]
+            memory.heater_state["air_valve_open_pct"] = applied_mvs["mv.air_valve_open_pct"]
+            memory.heater_state["damper_open_pct"] = applied_mvs["mv.damper_open_pct"]
             sim_resp = self._call_with_retry(self.sim_subagent, sim_req)
             if not sim_resp.success:
                 rejected.append({"candidate": candidate, "reasons": sim_resp.errors, "tier": gate.autonomy_tier})
@@ -287,6 +343,9 @@ def default_memory() -> SharedMemory:
             "process_pressure_barg": 10.0,
             "tube_dp_bar": 1.5,
             "stack_temp_c": 250.0,
+            "fuel_valve_open_pct": 52.0,
+            "air_valve_open_pct": 48.0,
+            "damper_open_pct": 45.0,
         },
         active_alarms=[],
         operating_constraints={

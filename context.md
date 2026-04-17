@@ -16,7 +16,7 @@ safety and traceable orchestration cycles.
 - Project home: `/mnt/d/poc/virtual_staff`
 - DWSIM automation reference repo:
   `/home/ranga-seshadri/projects/dwsim-python-automation`
-- Typical Ubuntu DWSIM install root: `/usr/local/lib/dwsim`
+- SQLite tag DB path (MVP1 active): `instrument_data/heater_tags.db`
 
 ## Important Files
 
@@ -24,8 +24,16 @@ safety and traceable orchestration cycles.
   - Core cycle controller, handoff retry/timeout, ranking, conflict rejection, operator handling
 - `virtual_staff/subagents.py`
   - Process optimization, maintenance, control room operator, simulation, safety audit behaviors
-- `virtual_staff/dwsim_pythonnet_runner.py`
-  - pythonnet Automation3 probe and DWSIM run path selection
+- `virtual_staff/python_simulator.py`
+  - Python-native dynamic simulator for candidate evaluation
+- `virtual_staff/tag_store.py`
+  - SQLite instrument tag storage and latest value reads
+- `virtual_staff/memory_builder.py`
+  - Shared memory build from current instrument tags
+- `virtual_staff/instrumentation.py`
+  - Tag catalog with instrument IDs, units, and signal roles (PV/SP/MV)
+- `virtual_staff/control_handles.py`
+  - MV bounds and ramp-rate policy enforcement
 - `virtual_staff/safety.py`
   - Deterministic policy, autonomy tiers, validation bounds
 - `virtual_staff/event_store.py`
@@ -35,7 +43,9 @@ safety and traceable orchestration cycles.
 - `fired_heater_control.py`
   - Closed-loop preview (used as compact control sanity trace)
 - `tests/test_virtual_staff_scenarios.py`
-  - Regression scenarios for normal/reject/conflict/fallback/retry-timeout/operator-alarm
+  - Regression scenarios for normal/reject/conflict/fallback/retry-timeout/operator-alarm/sqlite-memory/MV-handles
+- `mvp3/dwsim/`
+  - Deferred DWSIM/pythonnet integration assets for MVP3
 
 ## Core Data Flow
 
@@ -44,41 +54,38 @@ safety and traceable orchestration cycles.
 3. Process subagent emits candidate list.
 4. Control room operator subagent adjusts candidate under active alarms and constraints.
 5. Safety gate + safety audit validate each candidate.
-6. Simulation subagent evaluates candidate:
-   - pythonnet-first path,
-   - fallback to starter path,
+6. Orchestrator maps candidates to MV tags and writes ramp-limited commands to SQLite.
+7. Simulation subagent evaluates candidate using PV/SP/MV state:
+   - Python simulator-first path,
    - fallback to deterministic calculation path.
-7. Orchestrator applies maintenance conflict checks, ranks, selects.
-8. Event store logs all key events for replay.
+8. Orchestrator applies maintenance conflict checks, ranks, selects.
+9. Event store logs all key events (including MV writes) for replay.
 
 ## Runtime Output Paths
 
 - `ops_events/events.jsonl`
-- `dwsim_cases/<case>/inputs.json`
-- `dwsim_cases/<case>/outputs.json`
+- `mvp1_cases/<case>/inputs.json`
+- `mvp1_cases/<case>/outputs.json`
+- `instrument_data/heater_tags.db`
+- `mvp3/dwsim_cases/<case>/...` (deferred MVP3 assets)
 
 ## Environment Setup Hints
 
-Use when pythonnet path is needed:
+MVP1 setup (Python + SQLite):
 
-```bash
-export PYTHONNET_RUNTIME=coreclr
-export DOTNET_ROOT=/usr/lib/dotnet
-export DWSIM_EXE=dwsim
-```
-
-If pythonnet load fails:
-
-- verify DWSIM files under `/usr/local/lib/dwsim`
-- verify `DOTNET_ROOT`
-- run with fallback path and inspect `runtime_mode` in outputs
+- ensure Python `3.10+` is available
+- SQLite is available via Python stdlib (`sqlite3`)
+- create and use a virtual environment for all Python runs
+- use `uv`/`uv pip` for dependency install workflows
+- use `check_cuda.py` before GPU-dependent workloads
 
 ## First Commands in New Cursor Session
 
 ```bash
 cd /mnt/d/poc/virtual_staff
-python3 -m unittest tests/test_virtual_staff_scenarios.py
-python3 run_virtual_staff_cycle.py
+source .venv/bin/activate
+python -m unittest tests/test_virtual_staff_scenarios.py
+python run_virtual_staff_cycle.py
 ```
 
 ## Known Decisions
@@ -86,4 +93,6 @@ python3 run_virtual_staff_cycle.py
 - Standalone sibling project (no wrappers).
 - All virtual-staff related implementation moved from old repo.
 - Reference automation repo remains read/reference only.
+- MVP1 uses Python simulator + SQLite instrumentation.
+- DWSIM materials moved under `mvp3/` for deferred MVP3 activation.
 

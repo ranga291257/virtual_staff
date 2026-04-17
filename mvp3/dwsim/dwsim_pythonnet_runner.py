@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-from dwsim_integration_starter import CandidateSettings, DWSIMRunResult, DWSIMRunner, HeaterInputs
+from mvp3.dwsim.dwsim_integration_starter import CandidateSettings, DWSIMRunner, HeaterInputs
 
 
 class DWSIMPythonnetRunner:

@@ -7,9 +7,11 @@ from virtual_staff.contracts import (
     SharedMemory,
 )
 from virtual_staff.event_store import OpsEventStore
+from virtual_staff.memory_builder import SharedMemoryBuilder
 from virtual_staff.orchestrator import OrchestratorAgent, default_memory
+from virtual_staff.python_simulator import PythonHeaterSimulator
 from virtual_staff.safety import AUTONOMY_MATRIX, DeterministicSafetyGate, SafetyPolicy
-from virtual_staff.dwsim_pythonnet_runner import DWSIMPythonnetRunner
+from virtual_staff.tag_store import SQLiteTagStore
 
 __all__ = [
     "AgentRole",
@@ -19,7 +21,9 @@ __all__ = [
     "ROLE_CONTRACTS",
     "SharedMemory",
     "OpsEventStore",
-    "DWSIMPythonnetRunner",
+    "PythonHeaterSimulator",
+    "SQLiteTagStore",
+    "SharedMemoryBuilder",
     "OrchestratorAgent",
     "default_memory",
     "AUTONOMY_MATRIX",

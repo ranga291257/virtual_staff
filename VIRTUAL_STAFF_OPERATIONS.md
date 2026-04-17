@@ -16,11 +16,19 @@ It is aligned to the fired-heater reference case and advisory-first governance.
 - `virtual_staff/contracts.py`: role contracts, handoff models, schema definitions
 - `virtual_staff/safety.py`: deterministic safety policy, autonomy envelope
 - `virtual_staff/subagents.py`: process optimization, maintenance, Control Room Operator, simulation, safety-audit subagents
-- `virtual_staff/dwsim_pythonnet_runner.py`: pythonnet-first DWSIM Automation3 runner with starter fallback
+- `virtual_staff/python_simulator.py`: Python-native simulation backend for MVP1
+- `virtual_staff/tag_store.py`: SQLite-backed instrument tag store
+- `virtual_staff/memory_builder.py`: shared-memory builder from latest instrument values
+- `virtual_staff/instrumentation.py`: instrument catalog with IDs/units/roles
+- `virtual_staff/control_handles.py`: MV policies for bounds and ramp limits
 - `virtual_staff/orchestrator.py`: cycle scheduling logic, handoff/retry, ranking, and publication package
 - `virtual_staff/event_store.py`: JSONL event log and replay support
 - `run_virtual_staff_cycle.py`: single-cycle execution entrypoint
-- `tests/test_virtual_staff_scenarios.py`: normal/rejection/conflict/fallback/retry-timeout/operator-alarm scenario tests
+- `tests/test_virtual_staff_scenarios.py`: normal/rejection/conflict/fallback/retry-timeout/operator-alarm/sqlite-memory scenario tests
+
+Deferred modules:
+
+- `mvp3/dwsim/`: DWSIM/pythonnet integration assets reserved for MVP3
 
 ## Autonomy Matrix
 
@@ -62,9 +70,16 @@ Each response must include:
 3. Control Room Operator subagent applies bounded adjustments using active alarms and operating constraints.
 4. Deterministic safety gate validates each candidate.
 5. Safety audit subagent performs policy-level checks.
-6. Simulation subagent runs pythonnet-first DWSIM; falls back to starter and then deterministic calc if needed.
-7. Orchestrator ranks feasible candidates and emits selected action package.
-8. Event store logs handoffs, rejections, and cycle completion for replay.
+6. Orchestrator maps candidate values to MV tag commands and applies ramp-limited writes to SQLite.
+7. Simulation subagent runs Python simulator with PV/SP/MV state; falls back to deterministic calc if needed.
+8. Orchestrator ranks feasible candidates and emits selected action package.
+9. Event store logs handoffs, MV writes, rejections, and cycle completion for replay.
+
+## MVP Boundaries
+
+- **MVP1 (active)**: Python simulator + SQLite instrument emulation + advisory orchestration.
+- **MVP2 (planned)**: operator-facing integrations and governed command workflows.
+- **MVP3 (deferred)**: DWSIM/pythonnet-backed simulation stack under `mvp3/`.
 
 ## Local Pilot Boundaries
 

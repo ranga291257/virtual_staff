@@ -25,7 +25,7 @@ from fired_heater_calcs import CombustionBasis, ProcessBasis, solve_fired_heater
 # - DWSIM executable can be provided via DWSIM_EXE
 # - fallback to "dwsim" (must be available in PATH)
 DEFAULT_DWSIM_EXE = Path(os.getenv("DWSIM_EXE", "dwsim"))
-DEFAULT_WORKDIR = Path(__file__).resolve().parent / "dwsim_cases"
+DEFAULT_WORKDIR = Path(__file__).resolve().parent.parent / "dwsim_cases"
 
 
 @dataclass

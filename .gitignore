@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+
+.venv/
+py3.13_venv_gpu/
+
+instrument_data/
+mvp1_cases/
+ops_events/
+
+.cursor/
